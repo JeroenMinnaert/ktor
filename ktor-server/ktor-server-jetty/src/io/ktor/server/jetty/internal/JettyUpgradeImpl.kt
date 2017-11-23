@@ -1,6 +1,8 @@
 package io.ktor.server.jetty.internal
 
+import io.ktor.cio.*
 import io.ktor.content.*
+import io.ktor.http.*
 import io.ktor.server.jetty.*
 import io.ktor.server.servlet.*
 import kotlinx.coroutines.experimental.*
@@ -19,8 +21,9 @@ object JettyUpgradeImpl : ServletUpgrade {
             launch(engineContext) {
                 it.run()
             }
-        })
-        val outputChannel = EndPointWriteChannel(connection.endPoint)
+        }).toByteReadChannel()
+
+        val outputChannel = EndPointWriteChannel(connection.endPoint).toByteWriteChannel()
 
         servletRequest.setAttribute(HttpConnection.UPGRADE_CONNECTION_ATTRIBUTE, inputChannel)
         val job = upgrade.upgrade(inputChannel, outputChannel, engineContext, userContext)
