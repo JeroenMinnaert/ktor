@@ -233,9 +233,9 @@ class StaticContentTest {
         }
 
         handleRequest(HttpMethod.Get, "/").let { result ->
-            assertTrue(result.requestHandled)
             assertEquals(File(basedir, "features/StaticContentTest.kt".replaceSeparators()).readText(), result.response.content)
             assertEquals(listOf("max-age=300"), result.response.headers.values(HttpHeaders.CacheControl))
+            assertTrue(result.requestHandled)
         }
     }
 

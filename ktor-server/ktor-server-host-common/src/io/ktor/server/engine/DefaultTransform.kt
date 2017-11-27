@@ -6,6 +6,7 @@ import io.ktor.http.*
 import io.ktor.request.*
 import io.ktor.response.*
 import io.ktor.util.*
+import kotlinx.coroutines.experimental.io.*
 import java.io.*
 
 fun ApplicationSendPipeline.installDefaultTransformations() {
@@ -20,7 +21,7 @@ fun ApplicationReceivePipeline.installDefaultTransformations() {
     intercept(ApplicationReceivePipeline.Transform) { query ->
         val value = query.value as? IncomingContent ?: return@intercept
         val transformed: Any? = when (query.type) {
-            ReadChannel::class -> value.readChannel()
+            ByteReadChannel::class -> value.readChannel()
             InputStream::class -> value.inputStream()
             MultiPartData::class -> value.multiPartData()
             String::class -> value.readText()

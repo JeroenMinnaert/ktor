@@ -1,12 +1,10 @@
 package io.ktor.websocket
 
+import io.ktor.cio.*
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.channels.*
-import io.ktor.cio.*
 import kotlinx.coroutines.experimental.io.*
-import java.nio.*
 import java.nio.ByteBuffer
-import java.util.concurrent.atomic.*
 import kotlin.coroutines.experimental.*
 
 internal class WebSocketWriter(val writeChannel: ByteWriteChannel, val parent: Job, ctx: CoroutineContext, val pool: ByteBufferPool) {
@@ -25,15 +23,19 @@ internal class WebSocketWriter(val writeChannel: ByteWriteChannel, val parent: J
 
     private suspend fun ActorScope<Any>.writeLoop(buffer: ByteBuffer) {
         buffer.clear()
-        loop@for (msg in this) {
-            when (msg) {
-                is Frame -> if (drainQueueAndSerialize(msg, buffer)) break@loop
-                is FlushRequest -> msg.complete() // we don't need writeChannel.flush() here as we do flush at end of every drainQueueAndSerialize
-                else -> throw IllegalArgumentException("unknown message $msg")
+        try {
+            loop@ for (msg in this) {
+                when (msg) {
+                    is Frame -> if (drainQueueAndSerialize(msg, buffer)) break@loop
+                    is FlushRequest -> msg.complete() // we don't need writeChannel.flush() here as we do flush at end of every drainQueueAndSerialize
+                    else -> throw IllegalArgumentException("unknown message $msg")
+                }
             }
         }
-
-        close()
+        finally {
+            close()
+            writeChannel.close()
+        }
 
         consumeEach { msg ->
             when (msg) {

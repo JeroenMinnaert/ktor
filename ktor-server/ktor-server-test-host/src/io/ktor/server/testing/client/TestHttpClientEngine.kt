@@ -13,6 +13,8 @@ import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.io.*
 import java.util.concurrent.*
 
+private val EmptyByteArray = ByteArray(0)
+
 class TestHttpClientConfig : HttpClientEngineConfig() {
     lateinit var app: TestApplicationEngine
 }
@@ -27,7 +29,13 @@ class TestHttpClientEngine(private val app: TestApplicationEngine) : HttpClientE
                 addHeader(first, second)
             }
 
-            bodyBytes = content.toByteArray()
+            content.headers.flattenEntries().forEach { (first, second) ->
+                addHeader(first, second)
+            }
+
+            if (content !is OutgoingContent.NoContent) {
+                bodyBytes = content.toByteArray()
+            }
         }
     }
 
@@ -43,12 +51,13 @@ class TestHttpClientEngine(private val app: TestApplicationEngine) : HttpClientE
     }
 
     private fun OutgoingContent.toByteArray(): ByteArray = when (this) {
+        is OutgoingContent.NoContent -> EmptyByteArray
         is OutgoingContent.ByteArrayContent -> bytes()
         is OutgoingContent.ReadChannelContent -> runBlocking { readFrom().toByteArray() }
         is OutgoingContent.WriteChannelContent -> runBlocking {
             writer(ioCoroutineDispatcher) { writeTo(channel) }.channel.toByteArray()
         }
-        else -> throw UnsupportedContentTypeException(this)
+        is OutgoingContent.ProtocolUpgrade -> throw UnsupportedContentTypeException(this)
     }
 }
 

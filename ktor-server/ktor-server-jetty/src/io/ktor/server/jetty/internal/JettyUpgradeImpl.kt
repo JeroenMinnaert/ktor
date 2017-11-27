@@ -17,15 +17,16 @@ object JettyUpgradeImpl : ServletUpgrade {
         // Jetty doesn't support Servlet API's upgrade so we have to implement our own
 
         val connection = servletRequest.getAttribute(HttpConnection::class.qualifiedName) as Connection
-        val inputChannel = EndPointReadChannel(connection.endPoint, Executor {
+        val reader = EndPointReadChannel(connection.endPoint, Executor {
             launch(engineContext) {
                 it.run()
             }
-        }).toByteReadChannel()
+        })
 
+        val inputChannel = reader.toByteReadChannel()
         val outputChannel = EndPointWriteChannel(connection.endPoint).toByteWriteChannel()
 
-        servletRequest.setAttribute(HttpConnection.UPGRADE_CONNECTION_ATTRIBUTE, inputChannel)
+        servletRequest.setAttribute(HttpConnection.UPGRADE_CONNECTION_ATTRIBUTE, reader)
         val job = upgrade.upgrade(inputChannel, outputChannel, engineContext, userContext)
         job.invokeOnCompletion {
             connection.close()

@@ -44,8 +44,6 @@ class HttpCookies(private val storage: CookiesStorage) {
                 feature.forEach(context.request.url.host) {
                     builder.append(HttpHeaders.Cookie, renderSetCookieHeader(it))
                 }
-
-
             }
 
             scope.responsePipeline.intercept(HttpResponsePipeline.State) {

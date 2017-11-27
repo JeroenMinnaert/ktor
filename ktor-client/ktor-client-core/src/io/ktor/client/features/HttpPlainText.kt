@@ -38,10 +38,6 @@ class HttpPlainText(private val defaultCharset: Charset) {
             scope.responsePipeline.intercept(HttpResponsePipeline.Parse) { (expectedType, response) ->
                 if (expectedType != String::class) return@intercept
                 if (response !is IncomingContent) return@intercept
-
-                val contentType = context.response.contentType()
-                if (!contentType.match(ContentType.Text.Plain)) return@intercept
-
                 proceedWith(HttpResponseContainer(expectedType, feature.read(response)))
             }
         }

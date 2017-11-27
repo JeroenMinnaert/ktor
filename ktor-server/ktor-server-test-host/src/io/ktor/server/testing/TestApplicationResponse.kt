@@ -15,10 +15,21 @@ import java.util.concurrent.*
 
 class TestApplicationResponse(call: TestApplicationCall) : BaseApplicationResponse(call) {
     private val realContent = lazy { ByteChannel() }
+    private val completed: Job = Job()
 
     @Volatile
     private var closed = false
     private val webSocketCompleted = CompletableDeferred<Unit>()
+
+    val content: String? by lazy {
+        val charset = headers[HttpHeaders.ContentType]?.let { ContentType.parse(it).charset() } ?: Charsets.UTF_8
+        byteContent?.toString(charset)
+    }
+
+    val byteContent: ByteArray? by lazy {
+        if (!realContent.isInitialized()) return@lazy null
+        runBlocking { realContent.value.toByteArray() }
+    }
 
     override fun setStatus(statusCode: HttpStatusCode) {}
 
@@ -57,20 +68,23 @@ class TestApplicationResponse(call: TestApplicationCall) : BaseApplicationRespon
         }
     }
 
-    val content: String?
-        get() {
-            val charset = headers[HttpHeaders.ContentType]?.let { ContentType.parse(it).charset() } ?: Charsets.UTF_8
-            return byteContent?.toString(charset)
+    fun contentChannel(): ByteReadChannel? = realContent.value
+
+    fun complete(exception: Throwable? = null) {
+        if (realContent.isInitialized()) realContent.value.close(exception)
+        completed.cancel(exception)
+    }
+
+    fun discardContent() = runBlocking {
+        val channel = contentChannel()
+        if (channel != null) {
+            while (!channel.isClosedForRead) {
+                channel.read { it.position(it.limit()) }
+            }
         }
 
-    val byteContent: ByteArray?
-        get() = if (realContent.isInitialized()) {
-            runBlocking(Unconfined) {
-                realContent.value.toByteArray()
-            }
-        } else {
-            null
-        }
+        completed.join()
+    }
 
     fun close() {
         closed = true
@@ -83,6 +97,12 @@ class TestApplicationResponse(call: TestApplicationCall) : BaseApplicationRespon
             }
         }
     }
+}
+
+fun TestApplicationResponse.readBytes(size: Int): ByteArray = runBlocking {
+    val result = ByteArray(size)
+    contentChannel()!!.readFully(result)
+    result
 }
 
 fun TestApplicationResponse.contentType(): ContentType {

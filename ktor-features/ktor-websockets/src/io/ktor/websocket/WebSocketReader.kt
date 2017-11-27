@@ -1,10 +1,9 @@
 package io.ktor.websocket
 
 import io.ktor.cio.*
-import kotlinx.coroutines.experimental.io.*
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.channels.*
-import java.nio.*
+import kotlinx.coroutines.experimental.io.*
 import java.nio.ByteBuffer
 import java.nio.channels.*
 import java.util.concurrent.CancellationException

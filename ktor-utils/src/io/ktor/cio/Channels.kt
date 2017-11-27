@@ -51,7 +51,7 @@ suspend fun ReadChannel.readText(charset: Charset = Charsets.UTF_8): String {
     return buffer.toByteArray().toString(charset)
 }
 
-fun ReadChannel.toByteReadChannel(): ByteReadChannel = writer(Unconfined) {
+fun ReadChannel.toByteReadChannel(): ByteReadChannel = writer(Unconfined, autoFlush = true) {
     val buffer = ByteBuffer.allocate(4096)
     while (true) {
         buffer.clear()
@@ -65,7 +65,7 @@ fun ReadChannel.toByteReadChannel(): ByteReadChannel = writer(Unconfined) {
     close()
 }.channel
 
-fun WriteChannel.toByteWriteChannel(): ByteWriteChannel = reader(Unconfined) {
+fun WriteChannel.toByteWriteChannel(): ByteWriteChannel = reader(Unconfined, autoFlush = true) {
     val buffer = ByteBuffer.allocate(4096)
     channel.pass(buffer) { write(it) }
     close()

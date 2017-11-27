@@ -94,10 +94,11 @@ class ApacheHttpRequest(
                     content.writeTo(channel)
                 }.channel.toInputStream()
             }
-            else -> throw UnsupportedContentTypeException(content)
+            is OutgoingContent.ProtocolUpgrade -> throw UnsupportedContentTypeException(content)
         }
 
-        builder.entity = InputStreamEntity(bodyStream)
+        val length = content.headers[HttpHeaders.ContentLength]?.toLong() ?: -1L
+        builder.entity = InputStreamEntity(bodyStream, length)
     }
 
     private suspend fun sendRequest(

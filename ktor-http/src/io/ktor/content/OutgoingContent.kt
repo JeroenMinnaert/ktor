@@ -5,7 +5,6 @@ import io.ktor.http.*
 import io.ktor.util.*
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.io.*
-import java.io.*
 import kotlin.coroutines.experimental.*
 
 /**
@@ -38,6 +37,24 @@ sealed class OutgoingContent {
          * Provides [ReadChannel] from which engine will read the data and send it to peer
          */
         abstract fun readFrom(): ByteReadChannel
+
+        fun readFrom(range: LongRange): ByteReadChannel = writer(Unconfined, autoFlush = true) {
+            if (range.isEmpty()) return@writer
+
+            val source = readFrom()
+            var count = range.start.toInt()
+            val buffer = ByteBuffer.allocate(4096)
+            while (count > 0) {
+                buffer.clear()
+                if (count < buffer.limit()) buffer.limit(count)
+
+                source.readFully(buffer)
+                count -= buffer.position()
+            }
+
+            val limit = range.endInclusive - range.start + 1
+            source.copyTo(channel, limit)
+        }.channel
     }
 
     /**

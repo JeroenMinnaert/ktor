@@ -82,6 +82,7 @@ class JettyHttpRequest(
 
     private suspend fun sendRequestBody(request: JettyHttp2Request, content: OutgoingContent) {
         when (content) {
+            is OutgoingContent.NoContent -> return
             is OutgoingContent.ByteArrayContent -> {
                 request.write(ByteBuffer.wrap(content.bytes()))
                 request.endBody()
@@ -91,7 +92,7 @@ class JettyHttpRequest(
                 val source = writer(ioCoroutineDispatcher) { content.writeTo(channel) }.channel
                 source.writeResponse(request)
             }
-            else -> throw UnsupportedContentTypeException(content)
+            is OutgoingContent.ProtocolUpgrade -> throw UnsupportedContentTypeException(content)
         }
     }
 

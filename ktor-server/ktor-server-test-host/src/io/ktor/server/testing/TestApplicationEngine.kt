@@ -26,11 +26,7 @@ class TestApplicationEngine(environment: ApplicationEngineEnvironment = createTe
 
 
     fun handleRequest(setup: TestApplicationRequest.() -> Unit): TestApplicationCall {
-        val call = createCall(setup)
-        runBlocking {
-            pipeline.execute(call)
-        }
-        return call
+        return createCall(setup).apply { execute() }
     }
 
     fun handleWebSocket(uri: String, setup: TestApplicationRequest.() -> Unit): TestApplicationCall {
@@ -41,9 +37,7 @@ class TestApplicationEngine(environment: ApplicationEngineEnvironment = createTe
             addHeader(HttpHeaders.SecWebSocketKey, encodeBase64("test".toByteArray()))
 
             setup()
-        }
-
-        runBlocking(Unconfined) { pipeline.execute(call) }
+        }.apply { execute() }
 
         return call
     }
@@ -51,6 +45,16 @@ class TestApplicationEngine(environment: ApplicationEngineEnvironment = createTe
     fun createCall(setup: TestApplicationRequest.() -> Unit): TestApplicationCall {
         return TestApplicationCall(application).apply {
             setup(request)
+        }
+    }
+
+    private fun TestApplicationCall.execute() = launch(Unconfined) {
+        try {
+            pipeline.execute(this@execute)
+        } catch (t: Throwable) {
+            response.complete(t)
+        } finally {
+            response.complete()
         }
     }
 }

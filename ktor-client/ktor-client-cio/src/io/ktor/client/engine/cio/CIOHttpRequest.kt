@@ -87,9 +87,10 @@ class CIOHttpRequest(override val call: HttpClientCall, builder: HttpRequestBuil
         }
 
         if (body is OutgoingContent.NoContent) return
+        val chunked = bodySize == null || body.headers[HttpHeaders.TransferEncoding] == "chunked" || headers[HttpHeaders.TransferEncoding] == "chunked"
 
         launch(ioCoroutineDispatcher) {
-            if (bodySize == null) {
+            if (chunked) {
                 val encoder = encodeChunked(output, ioCoroutineDispatcher)
                 writeBody(body, encoder.channel)
                 encoder.join()
@@ -101,10 +102,11 @@ class CIOHttpRequest(override val call: HttpClientCall, builder: HttpRequestBuil
 
     private suspend fun writeBody(body: OutgoingContent, channel: ByteWriteChannel) {
         when (body) {
+            is OutgoingContent.NoContent -> return
             is OutgoingContent.ByteArrayContent -> channel.writeFully(body.bytes())
             is OutgoingContent.ReadChannelContent -> body.readFrom().copyTo(channel)
             is OutgoingContent.WriteChannelContent -> body.writeTo(channel)
-            else -> throw UnsupportedContentTypeException(body)
+            is OutgoingContent.ProtocolUpgrade -> throw UnsupportedContentTypeException(body)
         }
 
         channel.close()

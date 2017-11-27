@@ -6,7 +6,6 @@ import io.ktor.application.*
 import io.ktor.cio.*
 import kotlin.coroutines.experimental.*
 import kotlinx.coroutines.experimental.io.*
-import java.io.*
 
 internal class RawWebSocketImpl(override val call: ApplicationCall,
                                 val readChannel: ByteReadChannel,

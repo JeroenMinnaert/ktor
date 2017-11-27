@@ -65,7 +65,7 @@ private class ByteReadChannelInputStream(private val channel: ByteReadChannel) :
 
 fun ByteReadChannel.toInputStream(): InputStream = ByteReadChannelInputStream(this)
 
-fun InputStream.toByteReadChannel(pool: ObjectPool<ByteBuffer> = EmptyByteBufferPool): ByteReadChannel = writer(Unconfined) {
+fun InputStream.toByteReadChannel(pool: ObjectPool<ByteBuffer> = EmptyByteBufferPool): ByteReadChannel = writer(Unconfined, autoFlush = true) {
     val buffer = pool.borrow()
     while (true) {
         buffer.clear()

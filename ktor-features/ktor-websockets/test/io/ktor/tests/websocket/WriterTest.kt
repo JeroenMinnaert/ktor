@@ -27,7 +27,7 @@ class WriterTest {
                 buffer.close()
             }
         }
-        val writer = WebSocketWriter(out, job, coroutineContext, NoPool)
+        val writer = WebSocketWriter(out.toByteWriteChannel(), job, coroutineContext, NoPool)
 
         val body = ByteBuffer.allocate(65535)
         while (body.hasRemaining()) {
@@ -51,7 +51,7 @@ class WriterTest {
     fun testWriteDataAfterClose() = runBlocking {
         val out = ByteBufferWriteChannel()
         val job = Job()
-        val writer = WebSocketWriter(out, job, coroutineContext, NoPool)
+        val writer = WebSocketWriter(out.toByteWriteChannel(), job, coroutineContext, NoPool)
 
         writer.send(Frame.Close(CloseReason(CloseReason.Codes.NORMAL, "")))
         writer.send(Frame.Text("Yo"))
